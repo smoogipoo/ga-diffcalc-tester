@@ -48,7 +48,7 @@ jobs:
 
       - name: Setup files
         run: |
-          RULESET=$(cat $GENERATOR_ENV | grep "RULESET=" | awk -F "=" "{print $2}")
+          RULESET=$(cat $GENERATOR_ENV | grep "RULESET=" | awk -F "=" '{print $2}')
           echo "Ruleset: $RULESET"
 
           PERFORMANCE_DATA_NAME=$(curl -s https://data.ppy.sh/ | grep performance_$RULESET_top_1000 | tail -1 | awk -F "'" '{print $2}' | sed 's/\.tar\.bz2//g')
