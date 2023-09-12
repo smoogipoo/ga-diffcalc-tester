@@ -51,7 +51,7 @@ jobs:
           RULESET=$(cat $GENERATOR_ENV | grep "RULESET=" | awk -F "=" '{print $2}')
           echo "Ruleset: $RULESET"
 
-          PERFORMANCE_DATA_NAME=$(curl -s https://data.ppy.sh/ | grep performance_$RULESET_top_1000 | tail -1 | awk -F "'" '{print $2}' | sed 's/\.tar\.bz2//g')
+          PERFORMANCE_DATA_NAME=$(curl -s https://data.ppy.sh/ | grep "performance_$RULESET_top_1000\b" | tail -1 | awk -F "'" '{print $2}' | sed 's/\.tar\.bz2//g')
           echo "Data: $PERFORMANCE_DATA_NAME"
 
           BEATMAPS_DATA_NAME=$(curl -s https://data.ppy.sh/ | grep osu_files | tail -1 | awk -F "'" '{print $2}' | sed 's/\.tar\.bz2//g')
