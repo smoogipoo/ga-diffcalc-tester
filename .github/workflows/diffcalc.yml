@@ -48,7 +48,7 @@ jobs:
 
       - name: Setup files
         run: |
-          RULESET=$(cat $GENERATOR_ENV | sed -nr "s/^RULESET=.*$/\1/p")
+          RULESET=$(cat $GENERATOR_ENV | sed -nr "s/^RULESET=(.*)$/\1/p")
 
           PERFORMANCE_DATA_NAME=$(curl https://data.ppy.sh/ | grep performance_RULESET_top_1000 | tail -1 | awk -F "'" '{print $2}' | sed 's/\.tar\.bz2//g')
           BEATMAPS_DATA_NAME=$(curl https://data.ppy.sh/ | grep osu_files | tail -1 | awk -F "'" '{print $2}' | sed 's/\.tar\.bz2//g')
