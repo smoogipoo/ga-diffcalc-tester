@@ -1,0 +1,22 @@
+name: Difficulty Calculation
+on:
+  issue_comment:
+    types: [ created ]
+
+jobs:
+  diffcalc:
+    name: Run
+    runs-on: ubuntu-latest
+    if: github.event.issue.pull_request && contains(github.event.comment.body, '!diffcalc') && (github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'OWNER')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Checkout diffcalc-sheet-generator
+        uses: actions/checkout@v3
+        with:
+          path: 'diffcalc-sheet-generator'
+          repository: 'smoogipoo/diffcalc-sheet-generator'
+
+      - name: Setup
+        run: ./setup.sh ${{ github.event.comment.body }}
