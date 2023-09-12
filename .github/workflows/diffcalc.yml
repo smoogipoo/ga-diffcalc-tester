@@ -28,14 +28,14 @@ jobs:
           cp "${{ github.workspace }}/diffcalc-sheet-generator/.env.sample" "$GENERATOR_ENV"
 
           # Add default environment
-          cat "${{ github.workspace }}/.env" | sed -nr "s/^([^=]+)=(.*)$/\1=\2/p" | while read -r line; do
-              opt=$(echo $line | sed -nr "s/^([^=]+)=(.*)$/\1/p")
+          cat "${{ github.workspace }}/.env" | grep -E "^\w+=" | while read -r line; do
+              opt=$(echo $line | awk -F "=" '{print $1}')
               sed -i "s/^${opt}.*$/$line/" "$GENERATOR_ENV"
           done
 
           # Add comment environment
-          echo "${{ github.event.comment.body }}" | sed -nr "s/^([^=]+)=(.*)$/\1=\2/p" | while read -r line; do
-              opt=$(echo $line | sed -nr "s/^([^=]+)=(.*)$/\1/p")
+          echo "${{ github.event.comment.body }}" | sed -r "s/\r$//" | grep -E "^\w+=" | while read -r line; do
+              opt=$(echo $line | awk -F "=" '{print $1}')
               sed -i "s/^${opt}.*$/$line/" "$GENERATOR_ENV"
           done
 
@@ -48,7 +48,7 @@ jobs:
 
       - name: Setup files
         run: |
-          RULESET=$(cat $GENERATOR_ENV | sed -nr "s/^RULESET=(\w+)$/\1/p")
+          RULESET=$(cat $GENERATOR_ENV | grep "RULESET=" | awk -F "=" "{print $2}")
           echo "Ruleset: $RULESET"
 
           PERFORMANCE_DATA_NAME=$(curl -s https://data.ppy.sh/ | grep performance_$RULESET_top_1000 | tail -1 | awk -F "'" '{print $2}' | sed 's/\.tar\.bz2//g')
@@ -78,4 +78,3 @@ jobs:
         with:
           compose-file: "${{ github.workspace }}/diffcalc-sheet-generator/docker-compose.yml"
           up-flags: "--abort-on-container-exit --exit-code-from generator"
-          down-flags: "--volumes"
