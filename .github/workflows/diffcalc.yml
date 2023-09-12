@@ -77,4 +77,4 @@ jobs:
         uses: isbang/compose-action@v1.5.1
         with:
           compose-file: "${{ github.workspace }}/diffcalc-sheet-generator/docker-compose.yml"
-          up-flags: "--abort-on-container-exit --exit-code-from generator"
+          up-flags: "--abort-on-container-exit --exit-code-from=generator"
