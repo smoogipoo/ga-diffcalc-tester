@@ -19,4 +19,4 @@ jobs:
           repository: 'smoogipoo/diffcalc-sheet-generator'
 
       - name: Setup
-        run: ./setup.sh ${{ github.event.comment.body }}
+        run: ./setup.sh "${{ github.event.comment.body }}"
