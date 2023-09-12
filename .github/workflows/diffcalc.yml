@@ -60,7 +60,7 @@ jobs:
           echo "Downloading database dump $PERFORMANCE_DATA_NAME.."
           wget -q -nc https://data.ppy.sh/$PERFORMANCE_DATA_NAME.tar.bz2
           echo "Extracting..."
-          tar -xf "$PERFORMANCE_DATA_NAME.tar.bz2"
+          tar -I lbzip2 -xf "$PERFORMANCE_DATA_NAME.tar.bz2"
 
           rm -r "$GENERATOR_DIR/sql/$RULESET"
           mv "$PERFORMANCE_DATA_NAME" "$GENERATOR_DIR/sql/$RULESET"
@@ -68,7 +68,7 @@ jobs:
           echo "Downloading beatmap dump $BEATMAPS_DATA_NAME.."
           wget -q -nc https://data.ppy.sh/$BEATMAPS_DATA_NAME.tar.bz2
           echo "Extracting..."
-          tar -xf $BEATMAPS_DATA_NAME.tar.bz2
+          tar -I lbzip2 -xf $BEATMAPS_DATA_NAME.tar.bz2
 
           rm -r "$GENERATOR_DIR/beatmaps"
           mv "$BEATMAPS_DATA_NAME" "$GENERATOR_DIR/beatmaps"
