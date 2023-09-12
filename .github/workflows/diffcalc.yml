@@ -74,7 +74,6 @@ jobs:
           mv "$BEATMAPS_DATA_NAME" "$GENERATOR_DIR/beatmaps"
 
       - name: Run generator
-        uses: isbang/compose-action@v1.5.1
-        with:
-          compose-file: "${{ github.workspace }}/diffcalc-sheet-generator/docker-compose.yml"
-          up-flags: "--abort-on-container-exit --exit-code-from=generator"
+        run: |
+          cd $GENERATOR_DIR
+          docker-compose up --abort-on-container-exit --exit-code-from=generator
