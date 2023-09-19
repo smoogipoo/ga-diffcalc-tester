@@ -44,7 +44,6 @@ jobs:
 
           # Add Google credentials
           echo "${{ secrets.DIFFCALC_GOOGLE_CREDENTIALS }}" > "$GOOGLE_CREDS_FILE"
-          sed -i "s,^GOOGLE_CREDENTIALS_FILE=.*$,GOOGLE_CREDENTIALS_FILE=$GOOGLE_CREDS_FILE," "$GENERATOR_ENV"
 
       - name: Setup files
         run: |
