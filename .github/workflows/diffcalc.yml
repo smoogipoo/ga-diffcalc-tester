@@ -77,3 +77,9 @@ jobs:
         run: |
           cd $GENERATOR_DIR
           docker-compose up
+
+      - name: Shutdown
+        if: ${{ always() }}
+        run: |
+          cd $GENERATOR_DIR
+          docker-compose down -v
