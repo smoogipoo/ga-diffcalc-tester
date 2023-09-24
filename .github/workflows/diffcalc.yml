@@ -86,7 +86,7 @@ jobs:
           cp '${{ github.workspace }}/diffcalc-sheet-generator/.env.sample' "${GENERATOR_ENV}"
 
           # Add GH token
-          sed -i 's/^GH_TOKEN=.*$/GH_TOKEN=${{ secrets.DIFFCALC_GITHUB_TOKEN }}/' "${GENERATOR_ENV}"
+          sed -i 's/^GH_TOKEN=.*$/GH_TOKEN=${{ github.token }}/' "${GENERATOR_ENV}"
 
           # Add Google credentials
           echo '${{ secrets.DIFFCALC_GOOGLE_CREDENTIALS }}' | base64 -d > "${GOOGLE_CREDS_FILE}"
