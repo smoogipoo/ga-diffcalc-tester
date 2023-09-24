@@ -83,7 +83,7 @@ jobs:
 
             *This comment will update on completion*
 
-  prepare:
+  directory:
     name: Prepare
     needs: create-comment
     runs-on: self-hosted
@@ -98,11 +98,11 @@ jobs:
           path: 'diffcalc-sheet-generator'
           repository: 'smoogipoo/diffcalc-sheet-generator'
 
-  setup-environment:
+  environment:
     name: Setup environment
-    needs: prepare
+    needs: directory
     runs-on: self-hosted
-    if: ${{ always() && needs.prepare.result == 'success' }}
+    if: ${{ always() && needs.directory.result == 'success' }}
     steps:
       - name: Add base environment
         run: |
@@ -159,54 +159,76 @@ jobs:
               sed -i 's/^RANKED_ONLY=.*$/RANKED_ONLY=0/' "${GENERATOR_ENV}"
           fi
 
-  download-scores:
-    name: Download scores
-    needs: setup-environment
+  scores:
+    name: Setup scores
+    needs: environment
     runs-on: self-hosted
-    if: ${{ always() && needs.setup-environment.result == 'success' }}
+    if: ${{ always() && needs.environment.result == 'success' }}
     steps:
-      - name: Download & Extract
+      - name: Query latest data
+        id: query
         run: |
-          RULESET=$(cat ${GENERATOR_ENV} | grep -E '^RULESET=' | cut -d '=' -f2-)
-          echo "Ruleset: ${RULESET}"
+          ruleset=$(cat ${GENERATOR_ENV} | grep -E '^RULESET=' | cut -d '=' -f2-)
+          performance_data_name=$(curl -s "https://data.ppy.sh/" | grep "performance_${ruleset}_top_1000\b" | tail -1 | awk -F "'" '{print $2}' | sed 's/\.tar\.bz2//g')
 
-          PERFORMANCE_DATA_NAME=$(curl -s "https://data.ppy.sh/" | grep "performance_${RULESET}_top_1000\b" | tail -1 | awk -F "'" '{print $2}' | sed 's/\.tar\.bz2//g')
-          echo "Data: ${PERFORMANCE_DATA_NAME}"
+          echo "TARGET_DIR=${GENERATOR_DIR}/sql/${ruleset}" >> "${GITHUB_OUTPUT}"
+          echo "DATA_NAME=${performance_data_name}" >> "${GITHUB_OUTPUT}"
 
-          echo "Downloading database dump ${PERFORMANCE_DATA_NAME}.."
-          wget -q -nc "https://data.ppy.sh/${PERFORMANCE_DATA_NAME}.tar.bz2"
+      - name: Restore cache
+        id: restore-cache
+        uses: maxnowack/local-cache@v1
+        with:
+          path: ${{ steps.query.outputs.DATA_NAME }}.tar.bz2
+          key: ${{ steps.query.outputs.DATA_NAME }}
 
-          echo 'Extracting ${PERFORMANCE_DATA_NAME}...'
-          tar -I lbzip2 -xf "${PERFORMANCE_DATA_NAME}.tar.bz2"
+      - name: Download
+        if: steps.restore-cache.outputs.cache-hit != 'true'
+        run: |
+          wget -q -nc "https://data.ppy.sh/${{ steps.query.outputs.DATA_NAME }}.tar.bz2"
 
-          rm -r "${GENERATOR_DIR}/sql/${RULESET}"
-          mv "${PERFORMANCE_DATA_NAME}" "${GENERATOR_DIR}/sql/${RULESET}"
+      - name: Extract
+        run: |
+          tar -I lbzip2 -xf "${{ steps.query.outputs.DATA_NAME }}.tar.bz2"
+          rm -r "${{ steps.query.outputs.TARGET_DIR }}"
+          mv "${{ steps.query.outputs.DATA_NAME }}" "${{ steps.query.outputs.TARGET_DIR }}"
 
-  download-beatmaps:
-    name: Download beatmaps
-    needs: prepare
+  beatmaps:
+    name: Setup beatmaps
+    needs: directory
     runs-on: self-hosted
-    if: ${{ always() && needs.prepare.result == 'success' }}
+    if: ${{ always() && needs.directory.result == 'success' }}
     steps:
-      - name: Download & Extract
+      - name: Query latest data
+        id: query
         run: |
-          BEATMAPS_DATA_NAME=$(curl -s "https://data.ppy.sh/" | grep "osu_files" | tail -1 | awk -F "'" '{print $2}' | sed 's/\.tar\.bz2//g')
-          echo "Beatmaps: ${BEATMAPS_DATA_NAME}"
+          beatmaps_data_name=$(curl -s "https://data.ppy.sh/" | grep "osu_files" | tail -1 | awk -F "'" '{print $2}' | sed 's/\.tar\.bz2//g')
 
-          echo "Downloading beatmap dump ${BEATMAPS_DATA_NAME}.."
-          wget -q -nc "https://data.ppy.sh/${BEATMAPS_DATA_NAME}.tar.bz2"
+          echo "TARGET_DIR=${GENERATOR_DIR}/beatmaps" >> "${GITHUB_OUTPUT}"
+          echo "DATA_NAME=${beatmaps_data_name}" >> "${GITHUB_OUTPUT}"
 
-          echo 'Extracting ${BEATMAPS_DATA_NAME}...'
-          tar -I lbzip2 -xf "${BEATMAPS_DATA_NAME}.tar.bz2"
+      - name: Restore cache
+        id: restore-cache
+        uses: maxnowack/local-cache@v1
+        with:
+          path: ${{ steps.query.outputs.DATA_NAME }}.tar.bz2
+          key: ${{ steps.query.outputs.DATA_NAME }}
 
-          rm -r "${GENERATOR_DIR}/beatmaps"
-          mv "${BEATMAPS_DATA_NAME}" "${GENERATOR_DIR}/beatmaps"
+      - name: Download
+        if: steps.restore-cache.outputs.cache-hit != 'true'
+        run: |
+          wget -q -nc "https://data.ppy.sh/${{ steps.query.outputs.DATA_NAME }}.tar.bz2"
+
+      - name: Extract
+        run: |
+          tar -I lbzip2 -xf "${{ steps.query.outputs.DATA_NAME }}.tar.bz2"
+          rm -r "${{ steps.query.outputs.TARGET_DIR }}"
+          mv "${{ steps.query.outputs.DATA_NAME }}" "${{ steps.query.outputs.TARGET_DIR }}"
 
   generator:
     name: Run generator
-    needs: [setup-environment, download-scores, download-beatmaps]
+    needs: [ environment, scores, beatmaps ]
     runs-on: self-hosted
-    if: ${{ always() && needs.download-scores.result == 'success' && needs.download-beatmaps.result == 'success' }}
+    if: ${{ always() && needs.scores.result == 'success' && needs.beatmaps.result == 'success' }}
     outputs:
       TARGET: ${{ steps.run.outputs.TARGET }}
       SPREADSHEET_LINK: ${{ steps.run.outputs.SPREADSHEET_LINK }}
