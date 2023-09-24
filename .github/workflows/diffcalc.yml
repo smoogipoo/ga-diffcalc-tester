@@ -119,9 +119,6 @@ jobs:
           # Required by diffcalc-sheet-generator
           cp '${{ github.workspace }}/diffcalc-sheet-generator/.env.sample' "${{ needs.directory.outputs.GENERATOR_ENV }}"
 
-          # Add GH token
-          sed -i 's/^GH_TOKEN=.*$/GH_TOKEN=${{ github.token }}/' "${{ needs.directory.outputs.GENERATOR_ENV }}"
-
           # Add Google credentials
           echo '${{ secrets.DIFFCALC_GOOGLE_CREDENTIALS }}' | base64 -d > "${{ needs.directory.outputs.GOOGLE_CREDS_FILE }}"
 
@@ -246,6 +243,9 @@ jobs:
       - name: Run
         id: run
         run: |
+          # Add the GitHub token. This needs to be done here because it's unique per-job.
+          sed -i 's/^GH_TOKEN=.*$/GH_TOKEN=${{ github.token }}/' "${{ needs.directory.outputs.GENERATOR_ENV }}"
+
           cd "${{ needs.directory.outputs.GENERATOR_DIR }}"
           docker-compose up --build generator
 
