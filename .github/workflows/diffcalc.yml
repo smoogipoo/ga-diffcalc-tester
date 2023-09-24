@@ -62,7 +62,10 @@ jobs:
   diffcalc:
     name: Run
     runs-on: self-hosted
-    if: contains(github.event.comment.body, '!diffcalc') && (github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'OWNER')
+    if: |
+      github.event_name == 'workflow_dispatch'
+      || contains(github.event.comment.body, '!diffcalc')
+         && (github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'OWNER')
     env:
       GENERATOR_DIR: '${{ github.workspace }}/diffcalc-sheet-generator'
       GENERATOR_ENV: '${{ github.workspace }}/diffcalc-sheet-generator/.env'
