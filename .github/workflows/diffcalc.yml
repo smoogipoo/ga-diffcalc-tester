@@ -62,6 +62,9 @@ on:
 permissions:
   pull-requests: write
 
+env:
+  COMMENT_TAG: execution-${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}
+
 jobs:
   create-comment:
     name: Create PR comment
@@ -71,7 +74,7 @@ jobs:
         uses: thollander/actions-comment-pull-request@v2
         if: ${{ github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '!diffcalc') && github.event.comment.author_association == 'OWNER' }}
         with:
-          comment_tag: status
+          comment_tag: ${{ env.COMMENT_TAG }}
           message: |
             Difficulty calculator is now running... Please wait! (Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
@@ -219,7 +222,7 @@ jobs:
         if: ${{ needs.diffcalc.result == 'success' }}
         uses: thollander/actions-comment-pull-request@v2
         with:
-          comment_tag: status
+          comment_tag: ${{ env.COMMENT_TAG }}
           mode: upsert
           create_if_not_exists: false
           message: |
@@ -230,7 +233,7 @@ jobs:
         if: ${{ needs.diffcalc.result == 'failure' }}
         uses: thollander/actions-comment-pull-request@v2
         with:
-          comment_tag: status
+          comment_tag: ${{ env.COMMENT_TAG }}
           mode: upsert
           create_if_not_exists: false
           message: |
