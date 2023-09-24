@@ -84,7 +84,7 @@ jobs:
             *This comment will update on completion*
 
   directory:
-    name: Prepare
+    name: Prepare directory
     needs: create-comment
     runs-on: self-hosted
     if: ${{ always() && (github.event_name == 'workflow_dispatch' || contains(github.event.comment.body, '!diffcalc') && github.event.comment.author_association == 'OWNER') }}
