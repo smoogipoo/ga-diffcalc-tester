@@ -169,3 +169,9 @@ jobs:
         run: |
           cd "${GENERATOR_DIR}
           docker-compose down -v
+
+      - name: Output
+        if: ${{ success() }}
+        run: |
+          cd "${GENERATOR_DIR}"
+          docker-compose logs -n 10 | grep 'http' | sed -E 's/^.*(http.*)$/\1/'
