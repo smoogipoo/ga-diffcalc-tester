@@ -2,6 +2,61 @@ name: Difficulty Calculation
 on:
   issue_comment:
     types: [ created ]
+  workflow_dispatch:
+    inputs:
+      osu-a:
+        description: "The source build of ppy/osu"
+        type: string
+        required: false
+        default: 'https://github.com/ppy/osu'
+      osu-b:
+        description: "The target build of ppy/osu"
+        type: string
+        required: true
+      ruleset:
+        description: "The ruleset to process"
+        type: choice
+        required: true
+        options:
+          - osu
+          - taiko
+          - catch
+          - mania
+      converts:
+        description: "Include converted beatmaps"
+        type: boolean
+        required: false
+        default: true
+      ranked-only:
+        description: "Only ranked beatmaps"
+        type: boolean
+        required: false
+        default: true
+      mode:
+        description: "A comma-separated list of generators to run (available: [sr, pp, score])"
+        type: string
+        required: false
+        default: 'pp,sr'
+      difficulty-calculator-a:
+        description: "The source build of ppy/osu-difficulty-calculator"
+        type: string
+        required: false
+        default: 'https://github.com/ppy/osu-difficulty-calculator'
+      difficulty-calculator-b:
+        description: "The target build of ppy/osu-difficulty-calculator"
+        type: string
+        required: false
+        default: 'https://github.com/ppy/osu-difficulty-calculator'
+      score-processor-a:
+        description: "The source build of ppy/osu-queue-score-statistics"
+        type: string
+        required: false
+        default: 'https://github.com/ppy/osu-queue-score-statistics'
+      score-processor-b:
+        description: "The target build of ppy/osu-queue-score-statistics"
+        type: string
+        required: false
+        default: 'https://github.com/ppy/osu-queue-score-statistics'
 
 jobs:
   diffcalc:
