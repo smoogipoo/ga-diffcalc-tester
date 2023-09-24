@@ -159,7 +159,7 @@ jobs:
       - name: Run generator
         run: |
           cd $GENERATOR_DIR
-          docker-compose up --build
+          docker-compose up --build --exit-code-from=generator
 
       - name: Shutdown
         if: ${{ always() }}
