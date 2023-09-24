@@ -76,7 +76,7 @@ jobs:
         with:
           comment_tag: ${{ env.COMMENT_TAG }}
           message: |
-            Difficulty calculator is now running... Please wait! (Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            Difficulty calculator is now running... Please wait! (${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
             *This comment will update on completion*
 
