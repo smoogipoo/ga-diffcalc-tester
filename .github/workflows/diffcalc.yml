@@ -163,7 +163,11 @@ jobs:
       - name: Run generator
         run: |
           cd "${GENERATOR_DIR}"
+
           docker-compose up --build generator
+          link=$(docker-compose logs generator -n 10 | grep 'http' | sed -E 's/^.*(http.*)$/\1/')
+
+          echo "::set-env name=SPREADSHEET_LINK::${link}"
 
       - name: Shutdown
         if: ${{ always() }}
@@ -171,8 +175,6 @@ jobs:
           cd "${GENERATOR_DIR}
           docker-compose down -v
 
-      - name: Output
+      - name: Output spreadsheet
         if: ${{ success() }}
-        run: |
-          cd "${GENERATOR_DIR}"
-          docker-compose logs generator -n 10 | grep 'http' | sed -E 's/^.*(http.*)$/\1/'
+        run: 'echo "${SPREADSHEET_LINK}"'
