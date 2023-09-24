@@ -32,8 +32,8 @@ on:
         type: boolean
         required: false
         default: true
-      mode:
-        description: "A comma-separated list of generators to run (available: [sr, pp, score])"
+      generators:
+        description: "Comma-separated list of generators (available: [sr, pp, score])"
         type: string
         required: false
         default: 'pp,sr'
@@ -77,7 +77,7 @@ jobs:
           path: 'diffcalc-sheet-generator'
           repository: 'smoogipoo/diffcalc-sheet-generator'
 
-      - name: Setup environment
+      - name: Setup environment (base)
         run: |
           # Required by diffcalc-sheet-generator
           cp "${{ github.workspace }}/diffcalc-sheet-generator/.env.sample" "$GENERATOR_ENV"
@@ -88,17 +88,43 @@ jobs:
               sed -i "s/^${opt}.*$/$line/" "$GENERATOR_ENV"
           done
 
+          # Add GH token
+          sed -i "s/^GH_TOKEN=.*$/GH_TOKEN=${{ secrets.DIFFCALC_GITHUB_TOKEN }}/" "$GENERATOR_ENV"
+
+          # Add Google credentials
+          echo "${{ secrets.DIFFCALC_GOOGLE_CREDENTIALS }}" | base64 -d > "$GOOGLE_CREDS_FILE"
+
+      - name: Setup environment (comment)
+        if: ${{ github.event_name == 'issue_comment' }}
+        run: |
           # Add comment environment
           echo "${{ github.event.comment.body }}" | sed -r "s/\r$//" | grep -E "^\w+=" | while read -r line; do
               opt=$(echo $line | awk -F "=" '{print $1}')
               sed -i "s/^${opt}.*$/$line/" "$GENERATOR_ENV"
           done
 
-          # Add GH token
-          sed -i "s/^GH_TOKEN=.*$/GH_TOKEN=${{ secrets.DIFFCALC_GITHUB_TOKEN }}/" "$GENERATOR_ENV"
-
-          # Add Google credentials
-          echo "${{ secrets.DIFFCALC_GOOGLE_CREDENTIALS }}" | base64 -d > "$GOOGLE_CREDS_FILE"
+      - name: Setup environment (workflow dispatch)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          # Add dispatch environment
+          sed -i "s/^OSU_A=.*$/OSU_A=${{ inputs.osu-a }}/" "$GENERATOR_ENV"
+          sed -i "s/^OSU_B=.*$/OSU_B=${{ inputs.osu-b }}/" "$GENERATOR_ENV"
+          sed -i "s/^RULESET=.*$/RULESET=${{ inputs.ruleset }}/" "$GENERATOR_ENV"
+          sed -i "s/^GENERATORS=.*$/GENERATORS=${{ inputs.generators }}/" "$GENERATOR_ENV"
+          sed -i "s/^DIFFICULTY_CALCULATOR_A=.*$/DIFFICULTY_CALCULATOR_A=${{ inputs.difficulty-calculator-a }}/" "$GENERATOR_ENV"
+          sed -i "s/^DIFFICULTY_CALCULATOR_B=.*$/DIFFICULTY_CALCULATOR_B=${{ inputs.difficulty-calculator-b }}/" "$GENERATOR_ENV"
+          sed -i "s/^SCORE_PROCESSOR_A=.*$/SCORE_PROCESSOR_A=${{ inputs.score-processor-a }}/" "$GENERATOR_ENV"
+          sed -i "s/^SCORE_PROCESSOR_B=.*$/SCORE_PROCESSOR_B=${{ inputs.score-processor-b }}/" "$GENERATOR_ENV"
+          if [[ ${{ inputs.converts }} == "true" ]]; then
+              sed -i "s/^NO_CONVERTS=.*$/NO_CONVERTS=0/" "$GENERATOR_ENV"
+          else
+              sed -i "s/^NO_CONVERTS=.*$/NO_CONVERTS=1/" "$GENERATOR_ENV"
+          fi
+          if [[ ${{ inputs.ranked-only }} == "true" ]]; then
+              sed -i "s/^RANKED_ONLY=.*$/RANKED_ONLY=1/" "$GENERATOR_ENV"
+          else
+              sed -i "s/^RANKED_ONLY=.*$/RANKED_ONLY=0/" "$GENERATOR_ENV"
+          fi
 
       - name: Setup files
         run: |
