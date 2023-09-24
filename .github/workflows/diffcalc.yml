@@ -249,7 +249,7 @@ jobs:
         if: ${{ always() }}
         run: |
           cd "${{ github.workspace }}/${GENERATOR_DIR}"
-          docker-compose down
+          docker-compose down -v
 
       - name: Output info
         if: ${{ success() }}
