@@ -59,15 +59,36 @@ on:
         required: false
         default: 'https://github.com/ppy/osu-queue-score-statistics'
 
+permissions:
+  pull-requests: write
+
 jobs:
+  create-comment:
+    name: Create PR comment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create comment
+        uses: thollander/actions-comment-pull-request@v2
+        if: ${{ github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '!diffcalc') && github.event.comment.author_association == 'OWNER' }}
+        with:
+          comment_tag: status
+          message: |
+            Difficulty calculator is now running... Please wait! (Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+            *This comment will update on completion*
+
   diffcalc:
     name: Run
+    needs: create-comment
     runs-on: self-hosted
     if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.comment.body, '!diffcalc') && github.event.comment.author_association == 'OWNER' }}
     env:
       GENERATOR_DIR: '${{ github.workspace }}/diffcalc-sheet-generator'
       GENERATOR_ENV: '${{ github.workspace }}/diffcalc-sheet-generator/.env'
       GOOGLE_CREDS_FILE: '${{ github.workspace }}/diffcalc-sheet-generator/google-credentials.json'
+    outputs:
+      TARGET: ${{ steps.run.outputs.TARGET }}
+      SPREADSHEET_LINK: ${{ steps.run.outputs.SPREADSHEET_LINK }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -161,13 +182,17 @@ jobs:
           mv "${BEATMAPS_DATA_NAME}" "${GENERATOR_DIR}/beatmaps"
 
       - name: Run generator
+        id: run
         run: |
           cd "${GENERATOR_DIR}"
 
           docker-compose up --build generator
-          link=$(docker-compose logs generator -n 10 | grep 'http' | sed -E 's/^.*(http.*)$/\1/')
 
-          echo "SPREADSHEET_LINK=${link}" >> "$GITHUB_ENV"
+          link=$(docker-compose logs generator -n 10 | grep 'http' | sed -E 's/^.*(http.*)$/\1/')
+          target=$(cat "${GENERATOR_ENV}" | grep -E '^OSU_B=' | cut -d '=' -f2-)
+
+          echo "TARGET=${target}" >> "${GITHUB_OUTPUT}"
+          echo "SPREADSHEET_LINK=${link}" >> "${GITHUB_OUTPUT}"
 
       - name: Shutdown
         if: ${{ always() }}
@@ -175,6 +200,38 @@ jobs:
           cd "${GENERATOR_DIR}"
           docker-compose down
 
-      - name: Output spreadsheet
+      - name: Output
         if: ${{ success() }}
-        run: 'echo "${SPREADSHEET_LINK}"'
+        env:
+          TARGET: ${{ steps.run.outputs.TARGET }}
+          SPREADSHEET_LINK: ${{ steps.run.outputs.SPREADSHEET_LINK }}
+        run: |
+          echo "Target: ${TARGET}"
+          echo "Spreadsheet: ${SPREADSHEET_LINK}"
+
+  update-comment:
+    name: Update PR comment
+    needs: diffcalc
+    runs-on: ubuntu-latest
+    if: ${{ always() && github.event_name == 'issue_comment' && github.event.issue.pull_request }}
+    steps:
+      - name: Update comment on success
+        if: ${{ needs.diffcalc.result == 'success' }}
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          comment_tag: status
+          mode: upsert
+          create_if_not_exists: false
+          message: |
+            Target: ${{ needs.diffcalc.outputs.TARGET }}
+            Spreadsheet: ${{ needs.diffcalc.outputs.SPREADSHEET_LINK }}
+
+      - name: Update comment on failure
+        if: ${{ needs.diffcalc.result == 'failure' }}
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          comment_tag: status
+          mode: upsert
+          create_if_not_exists: false
+          message: |
+            Difficulty calculation failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
