@@ -106,7 +106,7 @@ jobs:
           # Add comment environment
           echo '${{ github.event.comment.body }}' | sed -r 's/\r$//' | grep -E '^\w+=' | while read -r line; do
               opt=$(echo ${line} | cut -d '=' -f1)
-              sed -i "s/^${opt}.*$/${line}/" "${GENERATOR_ENV}"
+              sed -i "s/^${opt}=.*$/${line}/" "${GENERATOR_ENV}"
           done
 
       - name: Setup environment (workflow dispatch)
