@@ -91,6 +91,15 @@ jobs:
           # Add Google credentials
           echo '${{ secrets.DIFFCALC_GOOGLE_CREDENTIALS }}' | base64 -d > "${GOOGLE_CREDS_FILE}"
 
+      - name: Setup environment (repository variables)
+        run: |
+          # Add dispatch variables
+          env | grep -E '^DIFFCALC_' | while read -r line; do
+              opt=$(echo ${line} | cut -d '=' -f1 | cut -d '_' -f2-)
+              val=$(echo ${line} | cut -d '=' -f2-)
+              sed -i "s;^${opt}=.*$;${opt}=${val};" "${GENERATOR_ENV}"
+          done
+
       - name: Setup environment (comment)
         if: ${{ github.event_name == 'issue_comment' }}
         run: |
@@ -122,15 +131,6 @@ jobs:
           else
               sed -i 's/^RANKED_ONLY=.*$/RANKED_ONLY=0/' "${GENERATOR_ENV}"
           fi
-
-      - name: Setup environment (repository variables)
-        run: |
-          # Add dispatch variables
-          env | grep -E '^DIFFCALC_' | while read -r line; do
-              opt=$(echo ${line} | cut -d '=' -f1 | cut -d '_' -f2-)
-              val=$(echo ${line} | cut -d '=' -f2-)
-              sed -i "s;^${opt}=.*$;${opt}=${val};" "${GENERATOR_ENV}"
-          done
 
       - name: Setup files
         run: |
