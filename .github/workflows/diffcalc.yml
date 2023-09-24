@@ -87,7 +87,7 @@ jobs:
     name: Prepare directory
     needs: create-comment
     runs-on: self-hosted
-    if: ${{ always() && (github.event_name == 'workflow_dispatch' || contains(github.event.comment.body, '!diffcalc') && github.event.comment.author_association == 'OWNER') }}
+    if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || contains(github.event.comment.body, '!diffcalc') && github.event.comment.author_association == 'OWNER') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -102,7 +102,7 @@ jobs:
     name: Setup environment
     needs: directory
     runs-on: self-hosted
-    if: ${{ always() && needs.directory.result == 'success' }}
+    if: ${{ !cancelled() && needs.directory.result == 'success' }}
     steps:
       - name: Add base environment
         run: |
@@ -163,7 +163,7 @@ jobs:
     name: Setup scores
     needs: environment
     runs-on: self-hosted
-    if: ${{ always() && needs.environment.result == 'success' }}
+    if: ${{ !cancelled() && needs.environment.result == 'success' }}
     steps:
       - name: Query latest data
         id: query
@@ -196,7 +196,7 @@ jobs:
     name: Setup beatmaps
     needs: directory
     runs-on: self-hosted
-    if: ${{ always() && needs.directory.result == 'success' }}
+    if: ${{ !cancelled() && needs.directory.result == 'success' }}
     steps:
       - name: Query latest data
         id: query
@@ -228,7 +228,7 @@ jobs:
     name: Run generator
     needs: [ environment, scores, beatmaps ]
     runs-on: self-hosted
-    if: ${{ always() && needs.scores.result == 'success' && needs.beatmaps.result == 'success' }}
+    if: ${{ !cancelled() && needs.scores.result == 'success' && needs.beatmaps.result == 'success' }}
     outputs:
       TARGET: ${{ steps.run.outputs.TARGET }}
       SPREADSHEET_LINK: ${{ steps.run.outputs.SPREADSHEET_LINK }}
