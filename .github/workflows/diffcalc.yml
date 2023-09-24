@@ -66,9 +66,6 @@ permissions:
 
 env:
   COMMENT_TAG: execution-${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}
-  GENERATOR_DIR: 'diffcalc-sheet-generator'
-  GENERATOR_ENV: 'diffcalc-sheet-generator/.env'
-  GOOGLE_CREDS_FILE: 'diffcalc-sheet-generator/google-credentials.json'
 
 jobs:
   create-comment:
@@ -90,6 +87,10 @@ jobs:
     needs: create-comment
     runs-on: self-hosted
     if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || contains(github.event.comment.body, '!diffcalc') && github.event.comment.author_association == 'OWNER') }}
+    outputs:
+      GENERATOR_DIR: ${{ steps.set-outputs.outputs.GENERATOR_DIR }}
+      GENERATOR_ENV: ${{ steps.set-outputs.outputs.GENERATOR_ENV }}
+      GOOGLE_CREDS_FILE: ${{ steps.set-outputs.outputs.GOOGLE_CREDS_FILE }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -100,6 +101,13 @@ jobs:
           path: 'diffcalc-sheet-generator'
           repository: 'smoogipoo/diffcalc-sheet-generator'
 
+      - name: Set outputs
+        id: set-outputs
+        run: |
+          echo "GENERATOR_DIR=${{ github.workspace }}/diffcalc-sheet-generator" >> "${GITHUB_OUTPUT}"
+          echo "GENERATOR_ENV=${{ github.workspace }}/diffcalc-sheet-generator/.env" >> "${GITHUB_OUTPUT}"
+          echo "GOOGLE_CREDS_FILE=${{ github.workspace }}/diffcalc-sheet-generator/google-credentials.json" >> "${GITHUB_OUTPUT}"
+
   environment:
     name: Setup environment
     needs: directory
@@ -109,25 +117,25 @@ jobs:
       - name: Add base environment
         run: |
           # Required by diffcalc-sheet-generator
-          cp '${{ github.workspace }}/diffcalc-sheet-generator/.env.sample' "${GENERATOR_ENV}"
+          cp '${{ github.workspace }}/diffcalc-sheet-generator/.env.sample' "${{ needs.directory.outputs.GENERATOR_ENV }}"
 
           # Add GH token
-          sed -i 's/^GH_TOKEN=.*$/GH_TOKEN=${{ github.token }}/' "${GENERATOR_ENV}"
+          sed -i 's/^GH_TOKEN=.*$/GH_TOKEN=${{ github.token }}/' "${{ needs.directory.outputs.GENERATOR_ENV }}"
 
           # Add Google credentials
-          echo '${{ secrets.DIFFCALC_GOOGLE_CREDENTIALS }}' | base64 -d > "${GOOGLE_CREDS_FILE}"
+          echo '${{ secrets.DIFFCALC_GOOGLE_CREDENTIALS }}' | base64 -d > "${{ needs.directory.outputs.GOOGLE_CREDS_FILE }}"
 
           # Add repository variables
           env | grep -E '^DIFFCALC_' | while read -r line; do
               opt=$(echo ${line} | cut -d '=' -f1 | cut -d '_' -f2-)
               val=$(echo ${line} | cut -d '=' -f2-)
-              sed -i "s;^${opt}=.*$;${opt}=${val};" "${GENERATOR_ENV}"
+              sed -i "s;^${opt}=.*$;${opt}=${val};" "${{ needs.directory.outputs.GENERATOR_ENV }}"
           done
 
       - name: Add pull-request environment
         if: ${{ github.event_name == 'issue_comment' && github.event.issue.pull_request }}
         run: |
-          sed -i "s;^OSU_B=.*$;OSU_B=${{ github.event.issue.pull_request.url }};" "${GENERATOR_ENV}"
+          sed -i "s;^OSU_B=.*$;OSU_B=${{ github.event.issue.pull_request.url }};" "${{ needs.directory.outputs.GENERATOR_ENV }}"
 
       - name: Add comment environment
         if: ${{ github.event_name == 'issue_comment' }}
@@ -135,45 +143,45 @@ jobs:
           # Add comment environment
           echo '${{ github.event.comment.body }}' | sed -r 's/\r$//' | grep -E '^\w+=' | while read -r line; do
               opt=$(echo ${line} | cut -d '=' -f1)
-              sed -i "s;^${opt}=.*$;${line};" "${GENERATOR_ENV}"
+              sed -i "s;^${opt}=.*$;${line};" "${{ needs.directory.outputs.GENERATOR_ENV }}"
           done
 
       - name: Add dispatch environment
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           # Add dispatch environment
-          sed -i 's;^OSU_A=.*$;OSU_A=${{ inputs.osu-a }};' "${GENERATOR_ENV}"
-          sed -i 's;^OSU_B=.*$;OSU_B=${{ inputs.osu-b }};' "${GENERATOR_ENV}"
-          sed -i 's/^RULESET=.*$/RULESET=${{ inputs.ruleset }}/' "${GENERATOR_ENV}"
-          sed -i 's/^GENERATORS=.*$/GENERATORS=${{ inputs.generators }}/' "${GENERATOR_ENV}"
-          sed -i 's;^DIFFICULTY_CALCULATOR_A=.*$;DIFFICULTY_CALCULATOR_A=${{ inputs.difficulty-calculator-a }};' "${GENERATOR_ENV}"
-          sed -i 's;^DIFFICULTY_CALCULATOR_B=.*$;DIFFICULTY_CALCULATOR_B=${{ inputs.difficulty-calculator-b }};' "${GENERATOR_ENV}"
-          sed -i 's;^SCORE_PROCESSOR_A=.*$;SCORE_PROCESSOR_A=${{ inputs.score-processor-a }};' "${GENERATOR_ENV}"
-          sed -i 's;^SCORE_PROCESSOR_B=.*$;SCORE_PROCESSOR_B=${{ inputs.score-processor-b }};' "${GENERATOR_ENV}"
+          sed -i 's;^OSU_A=.*$;OSU_A=${{ inputs.osu-a }};' "${{ needs.directory.outputs.GENERATOR_ENV }}"
+          sed -i 's;^OSU_B=.*$;OSU_B=${{ inputs.osu-b }};' "${{ needs.directory.outputs.GENERATOR_ENV }}"
+          sed -i 's/^RULESET=.*$/RULESET=${{ inputs.ruleset }}/' "${{ needs.directory.outputs.GENERATOR_ENV }}"
+          sed -i 's/^GENERATORS=.*$/GENERATORS=${{ inputs.generators }}/' "${{ needs.directory.outputs.GENERATOR_ENV }}"
+          sed -i 's;^DIFFICULTY_CALCULATOR_A=.*$;DIFFICULTY_CALCULATOR_A=${{ inputs.difficulty-calculator-a }};' "${{ needs.directory.outputs.GENERATOR_ENV }}"
+          sed -i 's;^DIFFICULTY_CALCULATOR_B=.*$;DIFFICULTY_CALCULATOR_B=${{ inputs.difficulty-calculator-b }};' "${{ needs.directory.outputs.GENERATOR_ENV }}"
+          sed -i 's;^SCORE_PROCESSOR_A=.*$;SCORE_PROCESSOR_A=${{ inputs.score-processor-a }};' "${{ needs.directory.outputs.GENERATOR_ENV }}"
+          sed -i 's;^SCORE_PROCESSOR_B=.*$;SCORE_PROCESSOR_B=${{ inputs.score-processor-b }};' "${{ needs.directory.outputs.GENERATOR_ENV }}"
           if [[ '${{ inputs.converts }}' == 'true' ]]; then
-              sed -i 's/^NO_CONVERTS=.*$/NO_CONVERTS=0/' "${GENERATOR_ENV}"
+              sed -i 's/^NO_CONVERTS=.*$/NO_CONVERTS=0/' "${{ needs.directory.outputs.GENERATOR_ENV }}"
           else
-              sed -i 's/^NO_CONVERTS=.*$/NO_CONVERTS=1/' "${GENERATOR_ENV}"
+              sed -i 's/^NO_CONVERTS=.*$/NO_CONVERTS=1/' "${{ needs.directory.outputs.GENERATOR_ENV }}"
           fi
           if [[ '${{ inputs.ranked-only }}' == 'true' ]]; then
-              sed -i 's/^RANKED_ONLY=.*$/RANKED_ONLY=1/' "${GENERATOR_ENV}"
+              sed -i 's/^RANKED_ONLY=.*$/RANKED_ONLY=1/' "${{ needs.directory.outputs.GENERATOR_ENV }}"
           else
-              sed -i 's/^RANKED_ONLY=.*$/RANKED_ONLY=0/' "${GENERATOR_ENV}"
+              sed -i 's/^RANKED_ONLY=.*$/RANKED_ONLY=0/' "${{ needs.directory.outputs.GENERATOR_ENV }}"
           fi
 
   scores:
     name: Setup scores
-    needs: environment
+    needs: [ directory, environment ]
     runs-on: self-hosted
     if: ${{ !cancelled() && needs.environment.result == 'success' }}
     steps:
       - name: Query latest data
         id: query
         run: |
-          ruleset=$(cat ${GENERATOR_ENV} | grep -E '^RULESET=' | cut -d '=' -f2-)
+          ruleset=$(cat ${{ needs.directory.outputs.GENERATOR_ENV }} | grep -E '^RULESET=' | cut -d '=' -f2-)
           performance_data_name=$(curl -s "https://data.ppy.sh/" | grep "performance_${ruleset}_top_1000\b" | tail -1 | awk -F "'" '{print $2}' | sed 's/\.tar\.bz2//g')
 
-          echo "TARGET_DIR=${GENERATOR_DIR}/sql/${ruleset}" >> "${GITHUB_OUTPUT}"
+          echo "TARGET_DIR=${{ needs.directory.outputs.GENERATOR_DIR }}/sql/${ruleset}" >> "${GITHUB_OUTPUT}"
           echo "DATA_NAME=${performance_data_name}" >> "${GITHUB_OUTPUT}"
 
       - name: Restore cache
@@ -205,7 +213,7 @@ jobs:
         run: |
           beatmaps_data_name=$(curl -s "https://data.ppy.sh/" | grep "osu_files" | tail -1 | awk -F "'" '{print $2}' | sed 's/\.tar\.bz2//g')
 
-          echo "TARGET_DIR=${GENERATOR_DIR}/beatmaps" >> "${GITHUB_OUTPUT}"
+          echo "TARGET_DIR=${{ needs.directory.outputs.GENERATOR_DIR }}/beatmaps" >> "${GITHUB_OUTPUT}"
           echo "DATA_NAME=${beatmaps_data_name}" >> "${GITHUB_OUTPUT}"
 
       - name: Restore cache
@@ -228,7 +236,7 @@ jobs:
 
   generator:
     name: Run generator
-    needs: [ environment, scores, beatmaps ]
+    needs: [ directory, environment, scores, beatmaps ]
     runs-on: self-hosted
     if: ${{ !cancelled() && needs.scores.result == 'success' && needs.beatmaps.result == 'success' }}
     outputs:
@@ -238,11 +246,11 @@ jobs:
       - name: Run
         id: run
         run: |
-          cd "${{ github.workspace }}/${GENERATOR_DIR}"
+          cd "${{ needs.directory.outputs.GENERATOR_DIR }}"
           docker-compose up --build generator
 
           link=$(docker-compose logs generator -n 10 | grep 'http' | sed -E 's/^.*(http.*)$/\1/')
-          target=$(cat "${GENERATOR_ENV}" | grep -E '^OSU_B=' | cut -d '=' -f2-)
+          target=$(cat "${{ needs.directory.outputs.GENERATOR_ENV }}" | grep -E '^OSU_B=' | cut -d '=' -f2-)
 
           echo "TARGET=${target}" >> "${GITHUB_OUTPUT}"
           echo "SPREADSHEET_LINK=${link}" >> "${GITHUB_OUTPUT}"
@@ -250,7 +258,7 @@ jobs:
       - name: Shutdown
         if: ${{ always() }}
         run: |
-          cd "${{ github.workspace }}/${GENERATOR_DIR}"
+          cd "${{ needs.directory.outputs.GENERATOR_DIR }}"
           docker-compose down -v
 
       - name: Output info
