@@ -83,89 +83,89 @@ jobs:
       - name: Setup environment (base)
         run: |
           # Required by diffcalc-sheet-generator
-          cp "${{ github.workspace }}/diffcalc-sheet-generator/.env.sample" "$GENERATOR_ENV"
+          cp '${{ github.workspace }}/diffcalc-sheet-generator/.env.sample' "${GENERATOR_ENV}"
 
           # Add GH token
-          sed -i "s/^GH_TOKEN=.*$/GH_TOKEN=${{ secrets.DIFFCALC_GITHUB_TOKEN }}/" "$GENERATOR_ENV"
+          sed -i 's/^GH_TOKEN=.*$/GH_TOKEN=${{ secrets.DIFFCALC_GITHUB_TOKEN }}/' "${GENERATOR_ENV}"
 
           # Add Google credentials
-          echo "${{ secrets.DIFFCALC_GOOGLE_CREDENTIALS }}" | base64 -d > "$GOOGLE_CREDS_FILE"
+          echo '${{ secrets.DIFFCALC_GOOGLE_CREDENTIALS }}' | base64 -d > "${GOOGLE_CREDS_FILE}"
 
       - name: Setup environment (comment)
         if: ${{ github.event_name == 'issue_comment' }}
         run: |
           # Add comment environment
-          echo "${{ github.event.comment.body }}" | sed -r "s/\r$//" | grep -E "^\w+=" | while read -r line; do
-              opt=$(echo $line | cut -d '=' -f1)
-              sed -i "s/^${opt}.*$/$line/" "$GENERATOR_ENV"
+          echo '${{ github.event.comment.body }}' | sed -r 's/\r$//' | grep -E '^\w+=' | while read -r line; do
+              opt=$(echo ${line} | cut -d '=' -f1)
+              sed -i "s/^${opt}.*$/${line}/" "${GENERATOR_ENV}"
           done
 
       - name: Setup environment (workflow dispatch)
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           # Add dispatch environment
-          sed -i "s;^OSU_A=.*$;OSU_A=${{ inputs.osu-a }};" "$GENERATOR_ENV"
-          sed -i "s;^OSU_B=.*$;OSU_B=${{ inputs.osu-b }};" "$GENERATOR_ENV"
-          sed -i "s/^RULESET=.*$/RULESET=${{ inputs.ruleset }}/" "$GENERATOR_ENV"
-          sed -i "s/^GENERATORS=.*$/GENERATORS=${{ inputs.generators }}/" "$GENERATOR_ENV"
-          sed -i "s;^DIFFICULTY_CALCULATOR_A=.*$;DIFFICULTY_CALCULATOR_A=${{ inputs.difficulty-calculator-a }};" "$GENERATOR_ENV"
-          sed -i "s;^DIFFICULTY_CALCULATOR_B=.*$;DIFFICULTY_CALCULATOR_B=${{ inputs.difficulty-calculator-b }};" "$GENERATOR_ENV"
-          sed -i "s;^SCORE_PROCESSOR_A=.*$;SCORE_PROCESSOR_A=${{ inputs.score-processor-a }};" "$GENERATOR_ENV"
-          sed -i "s;^SCORE_PROCESSOR_B=.*$;SCORE_PROCESSOR_B=${{ inputs.score-processor-b }};" "$GENERATOR_ENV"
-          if [[ ${{ inputs.converts }} == "true" ]]; then
-              sed -i "s/^NO_CONVERTS=.*$/NO_CONVERTS=0/" "$GENERATOR_ENV"
+          sed -i 's;^OSU_A=.*$;OSU_A=${{ inputs.osu-a }};' "${GENERATOR_ENV}"
+          sed -i 's;^OSU_B=.*$;OSU_B=${{ inputs.osu-b }};' "${GENERATOR_ENV}"
+          sed -i 's/^RULESET=.*$/RULESET=${{ inputs.ruleset }}/' "${GENERATOR_ENV}"
+          sed -i 's/^GENERATORS=.*$/GENERATORS=${{ inputs.generators }}/' "${GENERATOR_ENV}"
+          sed -i 's;^DIFFICULTY_CALCULATOR_A=.*$;DIFFICULTY_CALCULATOR_A=${{ inputs.difficulty-calculator-a }};' "${GENERATOR_ENV}"
+          sed -i 's;^DIFFICULTY_CALCULATOR_B=.*$;DIFFICULTY_CALCULATOR_B=${{ inputs.difficulty-calculator-b }};' "${GENERATOR_ENV}"
+          sed -i 's;^SCORE_PROCESSOR_A=.*$;SCORE_PROCESSOR_A=${{ inputs.score-processor-a }};' "${GENERATOR_ENV}"
+          sed -i 's;^SCORE_PROCESSOR_B=.*$;SCORE_PROCESSOR_B=${{ inputs.score-processor-b }};' "${GENERATOR_ENV}"
+          if [[ '${{ inputs.converts }}' == 'true' ]]; then
+              sed -i 's/^NO_CONVERTS=.*$/NO_CONVERTS=0/' "${GENERATOR_ENV}"
           else
-              sed -i "s/^NO_CONVERTS=.*$/NO_CONVERTS=1/" "$GENERATOR_ENV"
+              sed -i 's/^NO_CONVERTS=.*$/NO_CONVERTS=1/' "${GENERATOR_ENV}"
           fi
-          if [[ ${{ inputs.ranked-only }} == "true" ]]; then
-              sed -i "s/^RANKED_ONLY=.*$/RANKED_ONLY=1/" "$GENERATOR_ENV"
+          if [[ '${{ inputs.ranked-only }}' == 'true' ]]; then
+              sed -i 's/^RANKED_ONLY=.*$/RANKED_ONLY=1/' "${GENERATOR_ENV}"
           else
-              sed -i "s/^RANKED_ONLY=.*$/RANKED_ONLY=0/" "$GENERATOR_ENV"
+              sed -i 's/^RANKED_ONLY=.*$/RANKED_ONLY=0/' "${GENERATOR_ENV}"
           fi
 
       - name: Setup environment (repository variables)
         run: |
           # Add dispatch variables
           env | grep -E '^DIFFCALC_' | while read -r line; do
-            opt=$(echo $line | cut -d '=' -f1 | cut -d '_' -f2-)
-            val=$(echo $line | cut -d '=' -f2-)
-            sed -i "s;^${opt}=.*$;${opt}=${val};" "$GENERATOR_ENV"
+              opt=$(echo ${line} | cut -d '=' -f1 | cut -d '_' -f2-)
+              val=$(echo ${line} | cut -d '=' -f2-)
+              sed -i "s;^${opt}=.*$;${opt}=${val};" "${GENERATOR_ENV}"
           done
 
       - name: Setup files
         run: |
-          RULESET=$(cat $GENERATOR_ENV | grep "RULESET=" | cut -d '=' -f2-)
-          echo "Ruleset: $RULESET"
+          RULESET=$(cat ${GENERATOR_ENV} | grep 'RULESET=' | cut -d '=' -f2-)
+          echo "Ruleset: ${RULESET}"
 
-          PERFORMANCE_DATA_NAME=$(curl -s https://data.ppy.sh/ | grep "performance_${RULESET}_top_1000\b" | tail -1 | awk -F "'" '{print $2}' | sed 's/\.tar\.bz2//g')
-          echo "Data: $PERFORMANCE_DATA_NAME"
+          PERFORMANCE_DATA_NAME=$(curl -s "https://data.ppy.sh/" | grep "performance_${RULESET}_top_1000\b" | tail -1 | awk -F "'" '{print $2}' | sed 's/\.tar\.bz2//g')
+          echo "Data: ${PERFORMANCE_DATA_NAME}"
 
-          BEATMAPS_DATA_NAME=$(curl -s https://data.ppy.sh/ | grep osu_files | tail -1 | awk -F "'" '{print $2}' | sed 's/\.tar\.bz2//g')
-          echo "Beatmaps: $BEATMAPS_DATA_NAME"
+          BEATMAPS_DATA_NAME=$(curl -s "https://data.ppy.sh/" | grep "osu_files" | tail -1 | awk -F "'" '{print $2}' | sed 's/\.tar\.bz2//g')
+          echo "Beatmaps: ${BEATMAPS_DATA_NAME}"
 
-          echo "Downloading database dump $PERFORMANCE_DATA_NAME.."
-          wget -q -nc https://data.ppy.sh/$PERFORMANCE_DATA_NAME.tar.bz2
-          echo "Extracting..."
-          tar -I lbzip2 -xf "$PERFORMANCE_DATA_NAME.tar.bz2"
+          echo "Downloading database dump ${PERFORMANCE_DATA_NAME}.."
+          wget -q -nc "https://data.ppy.sh/${PERFORMANCE_DATA_NAME}.tar.bz2"
+          echo 'Extracting...'
+          tar -I lbzip2 -xf "${PERFORMANCE_DATA_NAME}.tar.bz2"
 
-          rm -r "$GENERATOR_DIR/sql/$RULESET"
-          mv "$PERFORMANCE_DATA_NAME" "$GENERATOR_DIR/sql/$RULESET"
+          rm -r "${GENERATOR_DIR}/sql/${RULESET}"
+          mv "${PERFORMANCE_DATA_NAME}" "${GENERATOR_DIR}/sql/${RULESET}"
 
-          echo "Downloading beatmap dump $BEATMAPS_DATA_NAME.."
-          wget -q -nc https://data.ppy.sh/$BEATMAPS_DATA_NAME.tar.bz2
-          echo "Extracting..."
-          tar -I lbzip2 -xf $BEATMAPS_DATA_NAME.tar.bz2
+          echo "Downloading beatmap dump ${BEATMAPS_DATA_NAME}.."
+          wget -q -nc "https://data.ppy.sh/${BEATMAPS_DATA_NAME}.tar.bz2"
+          echo 'Extracting...'
+          tar -I lbzip2 -xf "${BEATMAPS_DATA_NAME}.tar.bz2"
 
-          rm -r "$GENERATOR_DIR/beatmaps"
-          mv "$BEATMAPS_DATA_NAME" "$GENERATOR_DIR/beatmaps"
+          rm -r "${GENERATOR_DIR}/beatmaps"
+          mv "${BEATMAPS_DATA_NAME}" "${GENERATOR_DIR}/beatmaps"
 
       - name: Run generator
         run: |
-          cd $GENERATOR_DIR
+          cd "${GENERATOR_DIR}"
           docker-compose up --build generator
 
       - name: Shutdown
         if: ${{ always() }}
         run: |
-          cd $GENERATOR_DIR
+          cd "${GENERATOR_DIR}
           docker-compose down -v
