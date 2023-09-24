@@ -167,7 +167,7 @@ jobs:
           docker-compose up --build generator
           link=$(docker-compose logs generator -n 10 | grep 'http' | sed -E 's/^.*(http.*)$/\1/')
 
-          echo "::set-env name=SPREADSHEET_LINK::${link}"
+          echo "SPREADSHEET_LINK=${link}" >> "$GITHUB_ENV"
 
       - name: Shutdown
         if: ${{ always() }}
