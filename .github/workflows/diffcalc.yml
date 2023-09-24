@@ -69,10 +69,10 @@ jobs:
   create-comment:
     name: Create PR comment
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '!diffcalc') && github.event.comment.author_association == 'OWNER' }}
     steps:
       - name: Create comment
         uses: thollander/actions-comment-pull-request@v2
-        if: ${{ github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '!diffcalc') && github.event.comment.author_association == 'OWNER' }}
         with:
           comment_tag: ${{ env.COMMENT_TAG }}
           message: |
@@ -84,7 +84,7 @@ jobs:
     name: Run
     needs: create-comment
     runs-on: self-hosted
-    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.comment.body, '!diffcalc') && github.event.comment.author_association == 'OWNER' }}
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || contains(github.event.comment.body, '!diffcalc') && github.event.comment.author_association == 'OWNER') }}
     env:
       GENERATOR_DIR: '${{ github.workspace }}/diffcalc-sheet-generator'
       GENERATOR_ENV: '${{ github.workspace }}/diffcalc-sheet-generator/.env'
@@ -216,7 +216,7 @@ jobs:
     name: Update PR comment
     needs: diffcalc
     runs-on: ubuntu-latest
-    if: ${{ always() && github.event_name == 'issue_comment' && github.event.issue.pull_request }}
+    if: ${{ github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '!diffcalc') && github.event.comment.author_association == 'OWNER' }}
     steps:
       - name: Update comment on success
         if: ${{ needs.diffcalc.result == 'success' }}
