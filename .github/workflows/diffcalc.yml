@@ -172,7 +172,7 @@ jobs:
       - name: Shutdown
         if: ${{ always() }}
         run: |
-          cd "${GENERATOR_DIR}
+          cd "${GENERATOR_DIR}"
           docker-compose down -v
 
       - name: Output spreadsheet
