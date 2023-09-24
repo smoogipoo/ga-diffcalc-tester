@@ -64,6 +64,9 @@ permissions:
 
 env:
   COMMENT_TAG: execution-${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}
+  GENERATOR_DIR: 'diffcalc-sheet-generator'
+  GENERATOR_ENV: 'diffcalc-sheet-generator/.env'
+  GOOGLE_CREDS_FILE: 'diffcalc-sheet-generator/google-credentials.json'
 
 jobs:
   create-comment:
@@ -80,18 +83,11 @@ jobs:
 
             *This comment will update on completion*
 
-  diffcalc:
-    name: Run
+  prepare:
+    name: Prepare
     needs: create-comment
     runs-on: self-hosted
     if: ${{ always() && (github.event_name == 'workflow_dispatch' || contains(github.event.comment.body, '!diffcalc') && github.event.comment.author_association == 'OWNER') }}
-    env:
-      GENERATOR_DIR: '${{ github.workspace }}/diffcalc-sheet-generator'
-      GENERATOR_ENV: '${{ github.workspace }}/diffcalc-sheet-generator/.env'
-      GOOGLE_CREDS_FILE: '${{ github.workspace }}/diffcalc-sheet-generator/google-credentials.json'
-    outputs:
-      TARGET: ${{ steps.run.outputs.TARGET }}
-      SPREADSHEET_LINK: ${{ steps.run.outputs.SPREADSHEET_LINK }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -102,7 +98,13 @@ jobs:
           path: 'diffcalc-sheet-generator'
           repository: 'smoogipoo/diffcalc-sheet-generator'
 
-      - name: Setup environment (base)
+  setup-environment:
+    name: Setup environment
+    needs: prepare
+    runs-on: self-hosted
+    if: ${{ always() && needs.prepare.result == 'success' }}
+    steps:
+      - name: Add base environment
         run: |
           # Required by diffcalc-sheet-generator
           cp '${{ github.workspace }}/diffcalc-sheet-generator/.env.sample' "${GENERATOR_ENV}"
@@ -120,12 +122,12 @@ jobs:
               sed -i "s;^${opt}=.*$;${opt}=${val};" "${GENERATOR_ENV}"
           done
 
-      - name: Setup environment (pull request)
+      - name: Add pull-request environment
         if: ${{ github.event_name == 'issue_comment' && github.event.issue.pull_request }}
         run: |
           sed -i "s;^OSU_B=.*$;OSU_B=${{ github.event.issue.pull_request.url }};" "${GENERATOR_ENV}"
 
-      - name: Setup environment (comment)
+      - name: Add comment environment
         if: ${{ github.event_name == 'issue_comment' }}
         run: |
           # Add comment environment
@@ -134,7 +136,7 @@ jobs:
               sed -i "s;^${opt}=.*$;${line};" "${GENERATOR_ENV}"
           done
 
-      - name: Setup environment (workflow dispatch)
+      - name: Add dispatch environment
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           # Add dispatch environment
@@ -157,7 +159,13 @@ jobs:
               sed -i 's/^RANKED_ONLY=.*$/RANKED_ONLY=0/' "${GENERATOR_ENV}"
           fi
 
-      - name: Setup files
+  download-scores:
+    name: Download scores
+    needs: setup-environment
+    runs-on: self-hosted
+    if: ${{ always() && needs.setup-environment.result == 'success' }}
+    steps:
+      - name: Download & Extract
         run: |
           RULESET=$(cat ${GENERATOR_ENV} | grep -E '^RULESET=' | cut -d '=' -f2-)
           echo "Ruleset: ${RULESET}"
@@ -165,30 +173,48 @@ jobs:
           PERFORMANCE_DATA_NAME=$(curl -s "https://data.ppy.sh/" | grep "performance_${RULESET}_top_1000\b" | tail -1 | awk -F "'" '{print $2}' | sed 's/\.tar\.bz2//g')
           echo "Data: ${PERFORMANCE_DATA_NAME}"
 
-          BEATMAPS_DATA_NAME=$(curl -s "https://data.ppy.sh/" | grep "osu_files" | tail -1 | awk -F "'" '{print $2}' | sed 's/\.tar\.bz2//g')
-          echo "Beatmaps: ${BEATMAPS_DATA_NAME}"
-
           echo "Downloading database dump ${PERFORMANCE_DATA_NAME}.."
           wget -q -nc "https://data.ppy.sh/${PERFORMANCE_DATA_NAME}.tar.bz2"
-          echo 'Extracting...'
+
+          echo 'Extracting ${PERFORMANCE_DATA_NAME}...'
           tar -I lbzip2 -xf "${PERFORMANCE_DATA_NAME}.tar.bz2"
 
           rm -r "${GENERATOR_DIR}/sql/${RULESET}"
           mv "${PERFORMANCE_DATA_NAME}" "${GENERATOR_DIR}/sql/${RULESET}"
 
+  download-beatmaps:
+    name: Download beatmaps
+    needs: prepare
+    runs-on: self-hosted
+    if: ${{ always() && needs.prepare.result == 'success' }}
+    steps:
+      - name: Download & Extract
+        run: |
+          BEATMAPS_DATA_NAME=$(curl -s "https://data.ppy.sh/" | grep "osu_files" | tail -1 | awk -F "'" '{print $2}' | sed 's/\.tar\.bz2//g')
+          echo "Beatmaps: ${BEATMAPS_DATA_NAME}"
+
           echo "Downloading beatmap dump ${BEATMAPS_DATA_NAME}.."
           wget -q -nc "https://data.ppy.sh/${BEATMAPS_DATA_NAME}.tar.bz2"
-          echo 'Extracting...'
+
+          echo 'Extracting ${BEATMAPS_DATA_NAME}...'
           tar -I lbzip2 -xf "${BEATMAPS_DATA_NAME}.tar.bz2"
 
           rm -r "${GENERATOR_DIR}/beatmaps"
           mv "${BEATMAPS_DATA_NAME}" "${GENERATOR_DIR}/beatmaps"
 
-      - name: Run generator
+  generator:
+    name: Run generator
+    needs: [setup-environment, download-scores, download-beatmaps]
+    runs-on: self-hosted
+    if: ${{ always() && needs.download-scores.result == 'success' && needs.download-beatmaps.result == 'success' }}
+    outputs:
+      TARGET: ${{ steps.run.outputs.TARGET }}
+      SPREADSHEET_LINK: ${{ steps.run.outputs.SPREADSHEET_LINK }}
+    steps:
+      - name: Run
         id: run
         run: |
-          cd "${GENERATOR_DIR}"
-
+          cd "${{ github.workspace }}/${GENERATOR_DIR}"
           docker-compose up --build generator
 
           link=$(docker-compose logs generator -n 10 | grep 'http' | sed -E 's/^.*(http.*)$/\1/')
@@ -200,37 +226,34 @@ jobs:
       - name: Shutdown
         if: ${{ always() }}
         run: |
-          cd "${GENERATOR_DIR}"
+          cd "${{ github.workspace }}/${GENERATOR_DIR}"
           docker-compose down
 
-      - name: Output
+      - name: Output info
         if: ${{ success() }}
-        env:
-          TARGET: ${{ steps.run.outputs.TARGET }}
-          SPREADSHEET_LINK: ${{ steps.run.outputs.SPREADSHEET_LINK }}
         run: |
-          echo "Target: ${TARGET}"
-          echo "Spreadsheet: ${SPREADSHEET_LINK}"
+          echo "Target: ${{ steps.run.outputs.TARGET }}"
+          echo "Spreadsheet: ${{ steps.run.outputs.SPREADSHEET_LINK }}"
 
   update-comment:
     name: Update PR comment
-    needs: diffcalc
+    needs: generator
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '!diffcalc') && github.event.comment.author_association == 'OWNER' }}
     steps:
       - name: Update comment on success
-        if: ${{ needs.diffcalc.result == 'success' }}
+        if: ${{ needs.generator.result == 'success' }}
         uses: thollander/actions-comment-pull-request@v2
         with:
           comment_tag: ${{ env.COMMENT_TAG }}
           mode: upsert
           create_if_not_exists: false
           message: |
-            Target: ${{ needs.diffcalc.outputs.TARGET }}
-            Spreadsheet: ${{ needs.diffcalc.outputs.SPREADSHEET_LINK }}
+            Target: ${{ needs.generator.outputs.TARGET }}
+            Spreadsheet: ${{ needs.generator.outputs.SPREADSHEET_LINK }}
 
       - name: Update comment on failure
-        if: ${{ needs.diffcalc.result == 'failure' }}
+        if: ${{ needs.generator.result == 'failure' }}
         uses: thollander/actions-comment-pull-request@v2
         with:
           comment_tag: ${{ env.COMMENT_TAG }}
