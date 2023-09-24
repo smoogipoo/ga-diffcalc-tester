@@ -173,7 +173,7 @@ jobs:
         if: ${{ always() }}
         run: |
           cd "${GENERATOR_DIR}"
-          docker-compose down -v
+          docker-compose down
 
       - name: Output spreadsheet
         if: ${{ success() }}
