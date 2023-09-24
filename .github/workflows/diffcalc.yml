@@ -174,4 +174,4 @@ jobs:
         if: ${{ success() }}
         run: |
           cd "${GENERATOR_DIR}"
-          docker-compose logs -n 10 | grep 'http' | sed -E 's/^.*(http.*)$/\1/'
+          docker-compose logs generator -n 10 | grep 'http' | sed -E 's/^.*(http.*)$/\1/'
