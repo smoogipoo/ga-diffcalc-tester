@@ -1,4 +1,5 @@
 name: Difficulty Calculation
+
 on:
   issue_comment:
     types: [ created ]
@@ -64,8 +65,7 @@ jobs:
     runs-on: self-hosted
     if: |
       github.event_name == 'workflow_dispatch'
-      || contains(github.event.comment.body, '!diffcalc')
-         && (github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'OWNER')
+      || contains(github.event.comment.body, '!diffcalc') && github.event.comment.author_association == 'OWNER'
     env:
       GENERATOR_DIR: '${{ github.workspace }}/diffcalc-sheet-generator'
       GENERATOR_ENV: '${{ github.workspace }}/diffcalc-sheet-generator/.env'
