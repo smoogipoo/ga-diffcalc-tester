@@ -125,12 +125,13 @@ jobs:
           echo '${{ secrets.DIFFCALC_GOOGLE_CREDENTIALS }}' | base64 -d > "${{ needs.directory.outputs.GOOGLE_CREDS_FILE }}"
 
           # Add repository variables
-          echo ${VARS_JSON} | jq -c '. | to_entries | .[]' | while read -r line; do
+          echo "${VARS_JSON}" | jq -c '. | to_entries | .[]' | while read -r line; do
               opt=$(jq -r '.key' <<< ${line})
               val=$(jq -r '.value' <<< ${line})
 
               if [[ "${opt}" =~ ^DIFFCALC_ ]]; then
-                sed -i "s;^${opt}=.*$;${opt}=${val};" "${{ needs.directory.outputs.GENERATOR_ENV }}"
+                optNoPrefix=$(echo "${opt}" | cut -d '_' -f2-)
+                sed -i "s;^${optNoPrefix}=.*$;${optNoPrefix}=${val};" "${{ needs.directory.outputs.GENERATOR_ENV }}"
               fi
           done
 
