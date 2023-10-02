@@ -8,6 +8,7 @@ Self-hosted runner with installed:
 - `docker >= 20.10.16`
 - `docker-compose >= 2.5.1`
 - `lbzip2`
+- `jq`
 
 ## Usage
 
