@@ -241,6 +241,7 @@ jobs:
     name: Run generator
     needs: [ directory, environment, scores, beatmaps ]
     runs-on: self-hosted
+    timeout-minutes: 720
     if: ${{ !cancelled() && needs.scores.result == 'success' && needs.beatmaps.result == 'success' }}
     outputs:
       TARGET: ${{ steps.run.outputs.TARGET }}
