@@ -75,6 +75,7 @@ jobs:
       - uses: ahmadnassri/action-workflow-queue@v1
         with:
           timeout: 2147483647 # Around 24 days, maximum supported.
+          delay: 120000 # Poll every 2 minutes. API seems fairly low on this one.
 
   create-comment:
     name: Create PR comment
