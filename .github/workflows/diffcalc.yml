@@ -266,7 +266,7 @@ jobs:
         if: ${{ always() }}
         run: |
           cd "${{ needs.directory.outputs.GENERATOR_DIR }}"
-          docker-compose down -v
+          docker-compose down
 
       - name: Output info
         if: ${{ success() }}
