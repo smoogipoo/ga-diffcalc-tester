@@ -1,7 +1,5 @@
 name: Difficulty Calculation
 
-concurrency: diffcalc
-
 on:
   issue_comment:
     types: [ created ]
@@ -68,6 +66,15 @@ env:
   COMMENT_TAG: execution-${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}
 
 jobs:
+  wait-for-queue:
+    name: "Wait for previous workflows"
+    runs-on: ubuntu-latest
+    if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || contains(github.event.comment.body, '!diffcalc') && github.event.comment.author_association == 'OWNER') }}
+    steps:
+      - uses: ahmadnassri/action-workflow-queue@v1
+        with:
+          timeout: 2147483647 # Around 24 days, maximum supported.
+
   create-comment:
     name: Create PR comment
     runs-on: ubuntu-latest
@@ -84,7 +91,7 @@ jobs:
 
   directory:
     name: Prepare directory
-    needs: create-comment
+    needs: wait-for-queue
     runs-on: self-hosted
     if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || contains(github.event.comment.body, '!diffcalc') && github.event.comment.author_association == 'OWNER') }}
     outputs:
@@ -292,7 +299,7 @@ jobs:
 
   update-comment:
     name: Update PR comment
-    needs: generator
+    needs: [ create-comment, generator ]
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '!diffcalc') && github.event.comment.author_association == 'OWNER' }}
     steps:
