@@ -11,7 +11,7 @@ on:
         description: "The source build of ppy/osu"
         type: string
         required: false
-        default: 'https://github.com/ppy/osu'
+        default: 'latest'
       osu-b:
         description: "The target build of ppy/osu"
         type: string
@@ -44,22 +44,22 @@ on:
         description: "The source build of ppy/osu-difficulty-calculator"
         type: string
         required: false
-        default: 'https://github.com/ppy/osu-difficulty-calculator'
+        default: 'latest'
       difficulty-calculator-b:
         description: "The target build of ppy/osu-difficulty-calculator"
         type: string
         required: false
-        default: 'https://github.com/ppy/osu-difficulty-calculator'
+        default: 'latest'
       score-processor-a:
         description: "The source build of ppy/osu-queue-score-statistics"
         type: string
         required: false
-        default: 'https://github.com/ppy/osu-queue-score-statistics'
+        default: 'latest'
       score-processor-b:
         description: "The target build of ppy/osu-queue-score-statistics"
         type: string
         required: false
-        default: 'https://github.com/ppy/osu-queue-score-statistics'
+        default: 'latest'
 
 permissions:
   pull-requests: write
@@ -152,20 +152,36 @@ jobs:
       - name: Add dispatch environment
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
-          # Add dispatch environment
-          sed -i 's;^OSU_A=.*$;OSU_A=${{ inputs.osu-a }};' "${{ needs.directory.outputs.GENERATOR_ENV }}"
           sed -i 's;^OSU_B=.*$;OSU_B=${{ inputs.osu-b }};' "${{ needs.directory.outputs.GENERATOR_ENV }}"
           sed -i 's/^RULESET=.*$/RULESET=${{ inputs.ruleset }}/' "${{ needs.directory.outputs.GENERATOR_ENV }}"
           sed -i 's/^GENERATORS=.*$/GENERATORS=${{ inputs.generators }}/' "${{ needs.directory.outputs.GENERATOR_ENV }}"
-          sed -i 's;^DIFFICULTY_CALCULATOR_A=.*$;DIFFICULTY_CALCULATOR_A=${{ inputs.difficulty-calculator-a }};' "${{ needs.directory.outputs.GENERATOR_ENV }}"
-          sed -i 's;^DIFFICULTY_CALCULATOR_B=.*$;DIFFICULTY_CALCULATOR_B=${{ inputs.difficulty-calculator-b }};' "${{ needs.directory.outputs.GENERATOR_ENV }}"
-          sed -i 's;^SCORE_PROCESSOR_A=.*$;SCORE_PROCESSOR_A=${{ inputs.score-processor-a }};' "${{ needs.directory.outputs.GENERATOR_ENV }}"
-          sed -i 's;^SCORE_PROCESSOR_B=.*$;SCORE_PROCESSOR_B=${{ inputs.score-processor-b }};' "${{ needs.directory.outputs.GENERATOR_ENV }}"
+
+          if [[ '${{ inputs.osu-a }}' != 'latest' ]]; then
+              sed -i 's;^OSU_A=.*$;OSU_A=${{ inputs.osu-a }};' "${{ needs.directory.outputs.GENERATOR_ENV }}"
+          fi
+
+          if [[ '${{ inputs.difficulty-calculator-a }}' != 'latest' ]]; then
+            sed -i 's;^DIFFICULTY_CALCULATOR_A=.*$;DIFFICULTY_CALCULATOR_A=${{ inputs.difficulty-calculator-a }};' "${{ needs.directory.outputs.GENERATOR_ENV }}"
+          fi
+
+          if [[ '${{ inputs.difficulty-calculator-b }}' != 'latest' ]]; then
+            sed -i 's;^DIFFICULTY_CALCULATOR_B=.*$;DIFFICULTY_CALCULATOR_B=${{ inputs.difficulty-calculator-b }};' "${{ needs.directory.outputs.GENERATOR_ENV }}"
+          fi
+
+          if [[ '${{ inputs.score-processor-a }}' != 'latest' ]]; then
+            sed -i 's;^SCORE_PROCESSOR_A=.*$;SCORE_PROCESSOR_A=${{ inputs.score-processor-a }};' "${{ needs.directory.outputs.GENERATOR_ENV }}"
+          fi
+
+          if [[ '${{ inputs.score-processor-b }}' != 'latest' ]]; then
+            sed -i 's;^SCORE_PROCESSOR_B=.*$;SCORE_PROCESSOR_B=${{ inputs.score-processor-b }};' "${{ needs.directory.outputs.GENERATOR_ENV }}"
+          fi
+
           if [[ '${{ inputs.converts }}' == 'true' ]]; then
               sed -i 's/^NO_CONVERTS=.*$/NO_CONVERTS=0/' "${{ needs.directory.outputs.GENERATOR_ENV }}"
           else
               sed -i 's/^NO_CONVERTS=.*$/NO_CONVERTS=1/' "${{ needs.directory.outputs.GENERATOR_ENV }}"
           fi
+
           if [[ '${{ inputs.ranked-only }}' == 'true' ]]; then
               sed -i 's/^RANKED_ONLY=.*$/RANKED_ONLY=1/' "${{ needs.directory.outputs.GENERATOR_ENV }}"
           else
