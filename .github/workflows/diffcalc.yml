@@ -7,11 +7,6 @@ on:
     types: [ created ]
   workflow_dispatch:
     inputs:
-      osu-a:
-        description: "The source build of ppy/osu"
-        type: string
-        required: false
-        default: 'latest'
       osu-b:
         description: "The target build of ppy/osu"
         type: string
@@ -40,6 +35,11 @@ on:
         type: string
         required: false
         default: 'pp,sr'
+      osu-a:
+        description: "The source build of ppy/osu"
+        type: string
+        required: false
+        default: 'latest'
       difficulty-calculator-a:
         description: "The source build of ppy/osu-difficulty-calculator"
         type: string
