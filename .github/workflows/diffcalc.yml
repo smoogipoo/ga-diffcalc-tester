@@ -1,5 +1,7 @@
 name: Difficulty Calculation
 
+run-name: "${{ github.event_name == 'workflow_dispatch' && format('Manual run: {0}', inputs.osu-b) || 'Automatic comment trigger' }}"
+
 on:
   issue_comment:
     types: [ created ]
